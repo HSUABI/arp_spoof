@@ -22,7 +22,7 @@
 
 void usage() {
   printf("syntax: arp_spoof <interface> <sender ip> <target ip>\n");
-  printf("sample: pcap_test wlan0 192.168.10.34 192.168.10.1\n");
+  printf("sample: arp_spoof wlan0 192.168.10.34 192.168.10.1\n");
 }
 
 int main(int argc, char* argv[]) {
