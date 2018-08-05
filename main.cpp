@@ -21,7 +21,7 @@
 #define ARP_OPER_REP 0X0002
 
 void usage() {
-  printf("syntax: send_arp <interface> <sender ip> <target ip>\n");
+  printf("syntax: arp_spoof <interface> <sender ip> <target ip>\n");
   printf("sample: pcap_test wlan0 192.168.10.34 192.168.10.1\n");
 }
 

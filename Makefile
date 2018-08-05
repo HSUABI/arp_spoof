@@ -1,7 +1,7 @@
-all : send_arp
+all : arp_spoof
 
-send_arp: main.o printarr.o protocol_check.o swap_endian.o 
-	g++ -g -o send_arp main.o printarr.o protocol_check.o swap_endian.o -lpcap
+arp_spoof: main.o printarr.o protocol_check.o swap_endian.o 
+	g++ -g -o arp_spoof main.o printarr.o protocol_check.o swap_endian.o -lpcap
 
 swap_endian.o:
 	g++ -g -c -o swap_endian.o swap_endian.cpp
@@ -16,6 +16,6 @@ main.o:
 	g++ -g -c -o main.o main.cpp
 
 clean:
-	rm -f send_arp
+	rm -f arp_spoof
 	rm -f *.o
 
