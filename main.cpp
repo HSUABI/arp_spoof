@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
   struct sniff_arp *arp_reply;
   struct sniff_ethernet *ethernet;
   struct sniff_arp *arp;
+  struct sniff_ip *ip;
 
   char arp_request_sender_packet[42];    
   char arp_request_target_packet[42]; 
@@ -186,6 +187,9 @@ int main(int argc, char* argv[]) {
 
     ethernet = (struct sniff_ethernet*)packet;
     arp = (struct sniff_arp*)(packet + 14);
+    ip = (struct sniff_ip*)(packet + 14);
+
+    int packet_size = swap_word_endian(ip->ip_len) + 14;
 
     /* Get sender MAC address and send arp reply packet */
     if(arp_check(swap_word_endian(ethernet->ether_type))    // Is it ARP protocol?
@@ -213,10 +217,7 @@ int main(int argc, char* argv[]) {
         &&!memcmp((char*)ethernet->ether_shost , mac_sender , 6)
         &&ip_check(swap_word_endian(ethernet->ether_type)) )
     {
-      printf("check info \n");
-      printarr(ethernet->ether_shost,6);
-      printarr(ethernet->ether_dhost,6);
-      printf("%x\n",swap_word_endian(ethernet->ether_type));
+      printf("packet size %d \n",packet_size);
     }
 
     /* Send arp reply again */
